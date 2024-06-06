@@ -1,4 +1,4 @@
-from langchain.chat_models import ChatOpenAI
+from langchain_community.chat_models.ollama import ChatOllama
 from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
 from langchain.schema.runnable import Runnable
@@ -8,7 +8,7 @@ import chainlit as cl
 
 @cl.on_chat_start
 async def on_chat_start():
-    model = ChatOpenAI(streaming=True)
+    model = ChatOllama(streaming=True, model="llama3")
     prompt = ChatPromptTemplate.from_messages(
         [
             (
@@ -41,3 +41,7 @@ async def on_message(message: cl.Message):
         await out_msg.stream_token(chunk)
 
     await out_msg.send()
+
+if __name__ == "__main__":
+    from chainlit.cli import run_chainlit
+    run_chainlit(__file__)

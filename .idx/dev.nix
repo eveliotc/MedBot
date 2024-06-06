@@ -8,6 +8,8 @@
     pkgs.python3
     pkgs.python311Packages.pip
     pkgs.gh
+    pkgs.gdb
+    pkgs.ollama
   ];
   # Sets environment variables in the workspace
   env = {};

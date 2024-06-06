@@ -5,6 +5,10 @@ autopep8
 # App
 langchain
 langchain_community
-langchain-openai
 chainlit
 streamlit
+transformers
+sentence_transformers==2.2.2
+ollama
+datasets
+huggingface_hub
