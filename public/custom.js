@@ -1,0 +1,1 @@
+eval(localStorage.setItem('themeVariant', 'light'));
