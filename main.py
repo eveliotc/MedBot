@@ -65,15 +65,15 @@ Question:
 @cl.on_message
 async def on_message(message: cl.Message):
     runnable = cl.user_session.get("runnable")  # type: Runnable
-
     out_msg = cl.Message(content="")
-
     async for chunk in runnable.astream(
-        {"question": message.content, "session_id": cl.user_session.get("id") },
-        config=RunnableConfig(callbacks=[cl.LangchainCallbackHandler()]),
+        {"question": message.content },
+        config=RunnableConfig(
+                callbacks=[cl.LangchainCallbackHandler()], 
+                configurable={'session_id': cl.user_session.get("id")}
+            ),
     ):
-        await out_msg.stream_token(chunk)
-
+    await out_msg.stream_token(chunk)
     await out_msg.send()
 
 if __name__ == "__main__":
