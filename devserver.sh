@@ -11,4 +11,5 @@ printenv
 nohup ollama serve &
 sleep 2 && ollama pull $OLLAMA_MODEL
 
-python -Xfrozen_modules=off main.py
+python hf_fetch.py # prefetch datasets
+python main.py
