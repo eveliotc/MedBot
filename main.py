@@ -69,7 +69,7 @@ async def on_message(message: cl.Message):
     out_msg = cl.Message(content="")
 
     async for chunk in runnable.astream(
-        {"question": message.content },
+        {"question": message.content, "session_id": cl.user_session.id },
         config=RunnableConfig(callbacks=[cl.LangchainCallbackHandler()]),
     ):
         await out_msg.stream_token(chunk)
