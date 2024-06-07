@@ -16,6 +16,7 @@ import json
 import torch
 import tqdm
 import numpy as np
+import json
 
 class CompositeRetriever(BaseRetriever):
     
@@ -81,6 +82,21 @@ class MedRag():
                 retrieved_snippets[idx]["content"]) for idx in range(len(retrieved_snippets))] if len(retrieved_snippets) > 0 else []
         return "\n".join(contexts)
 
+class DocumentLike:
+    page_content=""
+    metadata=""
+
+    def __init__(self, page_content, metadata):
+        self.page_content = page_content
+        self.metadata = metadata
+
+    def toJSON(self):
+        return json.dumps(
+            self,
+            default=lambda o: o.__dict__,
+            sort_keys=True,
+            indent=4)
+
 class MedRagRetriever(BaseRetriever):
     medrag: MedRag = None
 
@@ -93,7 +109,7 @@ class MedRagRetriever(BaseRetriever):
     ) -> List[Document]:
         retrieved_snippets, scores = self.medrag.retrieve(query, num_snippets=32)
         documents = [
-            Document(
+            DocumentLike(
                 page_content=retrieved_snippets[idx]["content"], 
                 metadata={"title":retrieved_snippets[idx]["title"], "idx": idx, "score": scores[idx]}
             ) for idx in range(len(retrieved_snippets))] if len(retrieved_snippets) > 0 else []
