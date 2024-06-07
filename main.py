@@ -39,7 +39,7 @@ Note: The content on this site is for informational or educational purposes only
 </context>
 
 Question: 
-{question}
+{input}
             '''),
         ]
     )
@@ -54,7 +54,7 @@ Question:
     runnable = RunnableWithMessageHistory(
         chain,
         get_session_history,
-        input_messages_key="question",
+        input_messages_key="input",
         history_messages_key="chat_history",
         output_messages_key="answer",
     )
@@ -67,13 +67,13 @@ async def on_message(message: cl.Message):
     runnable = cl.user_session.get("runnable")  # type: Runnable
     out_msg = cl.Message(content="")
     async for chunk in runnable.astream(
-        {"question": message.content },
+        {"input": message.content },
         config=RunnableConfig(
                 callbacks=[cl.LangchainCallbackHandler()], 
                 configurable={'session_id': cl.user_session.get("id")}
             ),
     ):
-    await out_msg.stream_token(chunk)
+        await out_msg.stream_token(chunk)
     await out_msg.send()
 
 if __name__ == "__main__":
