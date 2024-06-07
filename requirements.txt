@@ -11,4 +11,6 @@ transformers
 sentence_transformers==2.2.2
 ollama
 datasets
+faiss-cpu
 huggingface_hub
+hf_transfer
