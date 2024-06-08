@@ -1,12 +1,13 @@
 import os
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from typing import List
 
 from langchain_core.callbacks import CallbackManagerForRetrieverRun
 from langchain_core.documents import Document
 from langchain_core.retrievers import BaseRetriever
+from langchain_core.embeddings import Embeddings
 
 from sentence_transformers.models import Transformer, Pooling
 from sentence_transformers import SentenceTransformer
@@ -42,11 +43,32 @@ class CustomSentenceTransformer(SentenceTransformer):
       pooling_model = Pooling(transformer_model.get_word_embedding_dimension(), 'cls')
       return [transformer_model, pooling_model]
 
+class MedCptEmbeddings(BaseModel, Embeddings): 
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+    model: str = "ncbi/MedCPT"
+    device: str = "cuda" if torch.cuda.is_available() else "cpu"
+    query_embedding_function: CustomSentenceTransformer = CustomSentenceTransformer("ncbi/MedCPT-Article-Encoder", device=device)
+    article_embedding_function: CustomSentenceTransformer = CustomSentenceTransformer("ncbi/MedCPT-Article-Encoder", device=device)
+
+    def __init__(self):
+        super().__init__()
+
+        self.query_embedding_function.eval()
+        self.article_embedding_function.eval()
+
+    def embed_documents(self, texts: List[str]) -> List[List[float]]:
+        with torch.no_grad():
+            return [self.article_embedding_function.encode(t) for t in texts]
+
+    def embed_query(self, text: str) -> List[float]:
+        with torch.no_grad():
+            return self.query_embedding_function.encode(question)
 
 def _idx2txt(indices, chunk_dir):
    return [json.loads(open(os.path.join(chunk_dir, i["source"]+".jsonl")).read().strip().split('\n')[i["index"]]) for i in indices]
 
 class MedRag():
+    
     def __init__(self, dataset="textbooks", corpus_dir = './corpus'):
         super().__init__()
 
@@ -54,8 +76,7 @@ class MedRag():
         assert dataset in hf_fetch._datasets
 
         self.dataset_name = dataset
-        self.embedding_function = CustomSentenceTransformer("ncbi/MedCPT-Query-Encoder", device="cuda" if torch.cuda.is_available() else "cpu")
-        self.embedding_function.eval()
+        self.embeddings = MedCptEmbeddings()
 
         self.index_dir = os.path.join(corpus_dir, dataset, "index", "ncbi/MedCPT-Article-Encoder")
         self.chunk_dir = os.path.join(corpus_dir, dataset, "chunk")
@@ -65,8 +86,9 @@ class MedRag():
 
     def retrieve(self, question, num_snippets=32):
         with torch.no_grad():
-            query_embed = self.embedding_function.encode(question)
+            query_embed = self.embeddings.aembed_query(question)
             result = self.index.search(np.array([query_embed]), k=num_snippets)
+
             indices = [self.metadatas[i] for i in result[1][0]]
             texts = _idx2txt(indices, self.chunk_dir)
             scores = result[0][0].tolist()
@@ -117,6 +139,9 @@ class MedRagRetriever(BaseRetriever):
             ) for idx in range(len(retrieved_snippets))] if len(retrieved_snippets) > 0 else []
         
         return documents
+
+    def embeddings(self):
+        return self.medrag.embeddings()
 
 if __name__ == "__main__":
     print(MedRagRetriever(dataset="textbooks", corpus_dir = './corpus').get_relevant_documents("covid"))
