@@ -1,6 +1,7 @@
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain_core.messages import AIMessage
 from langchain.output_parsers import OutputFixingParser
 from langchain.prompts import ChatPromptTemplate
 from langchain.retrievers import ContextualCompressionRetriever
@@ -28,15 +29,14 @@ from langchain_core.runnables import RunnablePassthrough
 
 
 class ACustomException(Exception):
-    """Custom LangChain tool exception."""
 
-    def __init__(self, msg: BaseMessage, exception: Exception) -> None:
+    def __init__(self, msg: AIMessage, exception: Exception) -> None:
         super().__init__()
         self.msg = msg
         self.exception = exception
 
 
-def custom_exception(msg: BaseMessage, config: RunnableConfig) -> Runnable:
+def custom_exception(msg: AIMessage, config: RunnableConfig) -> Runnable:
     try:
         print(f"parse {msg}")
         return StrOutputParser()
