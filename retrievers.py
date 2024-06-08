@@ -96,9 +96,8 @@ class DocumentEncoder(json.JSONEncoder):
       }
     return self._default_encoder.default(self, obj)
 
-def _install_document_jsondecoder():
-    # Workaround chainlit/socketio serialization
-    json._default_encoder = DocumentEncoder()
+# Workaround chainlit/socketio serialization
+json._default_encoder = DocumentEncoder()
 
 class MedRagRetriever(BaseRetriever):
     medrag: MedRag = None
@@ -106,7 +105,6 @@ class MedRagRetriever(BaseRetriever):
     def __init__(self, dataset="textbooks", corpus_dir = './corpus'):
         super().__init__()
         self.medrag = MedRag(dataset, corpus_dir)
-        _install_document_jsondecoder()
 
     def _get_relevant_documents(
         self, query: str, *args, run_manager: CallbackManagerForRetrieverRun
