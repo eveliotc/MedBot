@@ -27,6 +27,14 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolCall, ToolMessa
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough
 
+def generate_answer(msg: AIMessage, config: RunnableConfig) -> Runnable:
+    try:
+        print(f"parse {type(msg)}: {msg}")
+        msg['output'] = msg['answer'] if 'answer' in msg and 'output' else msg['text']
+        return msg | StrOutputParser()
+    except Exception as e:
+        print(f"generate_answer got e {e}")
+
 @cl.on_chat_start
 async def on_chat_start():
     prompt = ChatPromptTemplate.from_messages(
@@ -72,7 +80,7 @@ Question:
     pipeline_compressor = DocumentCompressorPipeline(transformers=[splitter, redundant_filter, relevant_filter])
     compressed_retriever = ContextualCompressionRetriever(base_compressor=pipeline_compressor, base_retriever=retriever)
 
-    chain = create_retrieval_chain(retriever, qa)
+    chain = create_retrieval_chain(retriever, qa) | generate_answer
 
     runnable = RunnableWithMessageHistory(
         chain,
@@ -82,7 +90,7 @@ Question:
         output_messages_key="output",
     )
 
-    cl.user_session.set("runnable", runnable)
+    cl.user_session.set("runnable", chain)
 
 
 @cl.on_message
