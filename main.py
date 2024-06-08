@@ -27,22 +27,12 @@ from langchain_core.messages import AIMessage, HumanMessage, ToolCall, ToolMessa
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.runnables import RunnablePassthrough
 
-
-class ACustomException(Exception):
-
-    def __init__(self, msg: AIMessage, exception: Exception) -> None:
-        super().__init__()
-        self.msg = msg
-        self.exception = exception
-
-
-def custom_exception(msg: AIMessage, config: RunnableConfig) -> Runnable:
+def generate_answer(msg: AIMessage, config: RunnableConfig) -> Runnable:
     try:
-        print(f"parse {msg}")
-        return StrOutputParser()
+        print(f"parse {type(msg)}: {msg}")
+        return msg | StrOutputParser()
     except Exception as e:
-        print(f"parse got e {e}")
-        raise ACustomException(msg, e)
+        print(f"generate_answer got e {e}")
 
 @cl.on_chat_start
 async def on_chat_start():
@@ -53,10 +43,11 @@ async def on_chat_start():
                 """
 Your name is MedBot. 
 You are an assistant for question-answering tasks about health topics.
-Use the following pieces of retrieved context to answer the question but do not talk about the context or who provided the context.
+Use the context provided to answer the question.
+On your answer do not mention the context or who provided the context.
+Focus on the summarizing the contents providing the most educational answer possible.
 If you don't know the answer, just say that you don't know.
 Use five sentences maximum and keep the answer concise.
-Provide the most educational answer possible.
 You are not a real doctor or healthcare professional.
 You can carry on the conversation with the user with follow up questions about their health or health topics.
 You can ask the user whether they are worried about those symptoms or illnesses they are asking about or what kind of symptons they have if not related.
@@ -88,7 +79,7 @@ Question:
     pipeline_compressor = DocumentCompressorPipeline(transformers=[splitter, redundant_filter, relevant_filter])
     compressed_retriever = ContextualCompressionRetriever(base_compressor=pipeline_compressor, base_retriever=retriever)
 
-    chain = create_retrieval_chain(retriever, qa) | custom_exception
+    chain = create_retrieval_chain(retriever, qa) | generate_answer
 
     runnable = RunnableWithMessageHistory(
         chain,
