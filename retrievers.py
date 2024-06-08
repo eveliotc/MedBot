@@ -47,7 +47,7 @@ class MedCptEmbeddings(BaseModel, Embeddings):
     model_config = ConfigDict(arbitrary_types_allowed=True)
     model: str = "ncbi/MedCPT"
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
-    query_embedding_function: CustomSentenceTransformer = CustomSentenceTransformer("ncbi/MedCPT-Article-Encoder", device=device)
+    query_embedding_function: CustomSentenceTransformer = CustomSentenceTransformer("ncbi/MedCPT-Query-Encoder", device=device)
     article_embedding_function: CustomSentenceTransformer = CustomSentenceTransformer("ncbi/MedCPT-Article-Encoder", device=device)
 
     def __init__(self):
