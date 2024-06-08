@@ -6,6 +6,11 @@ from langchain.prompts import ChatPromptTemplate
 from langchain.schema import StrOutputParser
 from langchain.schema.runnable import Runnable
 from langchain.schema.runnable.config import RunnableConfig
+from langchain_text_splitters.character import CharacterTextSplitter
+from langchain_community.document_transformers.embeddings_redundant_filter import EmbeddingsRedundantFilter
+from langchain_community.document_transformers.embeddings_filter import EmbeddingsFilter
+from langchain_community.document_transformers.document_compressor_pipeline import DocumentCompressorPipeline
+from langchain_community.retrievers.contextual_compression_retriever import ContextualCompressionRetriever
 
 from history import get_session_history
 from retrievers import MedRagRetriever
@@ -49,7 +54,14 @@ Question:
 
     retriever = MedRagRetriever(dataset="textbooks", corpus_dir = './corpus')
 
-    chain = create_retrieval_chain(retriever, qa)
+    embeddings = retriever.embeddings()
+    splitter = CharacterTextSplitter(chunk_size=300, chunk_overlap=0, separator=". ")
+    redundant_filter = EmbeddingsRedundantFilter(embeddings=embeddings)
+    relevant_filter = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=0.76)
+    pipeline_compressor = DocumentCompressorPipeline(transformers=[splitter, redundant_filter, relevant_filter])
+    compressed_retriever = ContextualCompressionRetriever(base_compressor=pipeline_compressor, base_retriever=retriever)
+
+    chain = create_retrieval_chain(compressed_retriever, qa)
 
     runnable = RunnableWithMessageHistory(
         chain,
