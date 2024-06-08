@@ -82,20 +82,23 @@ class MedRag():
                 retrieved_snippets[idx]["content"]) for idx in range(len(retrieved_snippets))] if len(retrieved_snippets) > 0 else []
         return "\n".join(contexts)
 
-class DocumentLike:
-    page_content=""
-    metadata=""
+class DocumentEncoder(json.JSONEncoder):
 
-    def __init__(self, page_content, metadata):
-        self.page_content = page_content
-        self.metadata = metadata
+  def __init__(self):
+    self.__dict__.update(json._default_encoder.__dict__)
+    self._default_encoder = json._default_encoder
 
-    def toJSON(self):
-        return json.dumps(
-            self,
-            default=lambda o: o.__dict__,
-            sort_keys=True,
-            indent=4)
+  def default(self, obj):
+    if isinstance(obj, Document):
+      return {
+        "page_content": obj.page_content,
+        "metadata": obj.metadata
+      }
+    return self._default_encoder.default(self, obj)
+
+def _install_document_jsondecoder():
+    # Workaround chainlit/socketio serialization
+    json._default_encoder = DocumentEncoder()
 
 class MedRagRetriever(BaseRetriever):
     medrag: MedRag = None
@@ -103,13 +106,14 @@ class MedRagRetriever(BaseRetriever):
     def __init__(self, dataset="textbooks", corpus_dir = './corpus'):
         super().__init__()
         self.medrag = MedRag(dataset, corpus_dir)
+        _install_document_jsondecoder()
 
     def _get_relevant_documents(
         self, query: str, *args, run_manager: CallbackManagerForRetrieverRun
     ) -> List[Document]:
         retrieved_snippets, scores = self.medrag.retrieve(query, num_snippets=32)
         documents = [
-            DocumentLike(
+            Document(
                 page_content=retrieved_snippets[idx]["content"], 
                 metadata={"title":retrieved_snippets[idx]["title"], "idx": idx, "score": scores[idx]}
             ) for idx in range(len(retrieved_snippets))] if len(retrieved_snippets) > 0 else []
