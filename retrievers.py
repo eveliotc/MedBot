@@ -109,7 +109,7 @@ class MedRagRetriever(BaseRetriever):
     def _get_relevant_documents(
         self, query: str, *args, run_manager: CallbackManagerForRetrieverRun
     ) -> List[Document]:
-        retrieved_snippets, scores = self.medrag.retrieve(query, num_snippets=32)
+        retrieved_snippets, scores = self.medrag.retrieve(query, num_snippets=3) # top 3 snippets
         documents = [
             Document(
                 page_content=retrieved_snippets[idx]["content"], 
