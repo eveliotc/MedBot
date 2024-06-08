@@ -86,7 +86,7 @@ class MedRag():
 
     def retrieve(self, question, num_snippets=32):
         with torch.no_grad():
-            query_embed = self.embeddings.aembed_query(question)
+            query_embed = self.embeddings.query_embedding_function.encode(question)
             result = self.index.search(np.array([query_embed]), k=num_snippets)
 
             indices = [self.metadatas[i] for i in result[1][0]]
