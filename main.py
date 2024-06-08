@@ -30,7 +30,7 @@ from langchain_core.runnables import RunnablePassthrough
 def generate_answer(msg: AIMessage, config: RunnableConfig) -> Runnable:
     try:
         print(f"parse {type(msg)}: {msg}")
-        return str(msg["answer"]) | StrOutputParser()
+        return msg | StrOutputParser()
     except Exception as e:
         print(f"generate_answer got e {e}")
 
@@ -86,7 +86,7 @@ Question:
         get_session_history,
         input_messages_key="input",
         history_messages_key="chat_history",
-        output_messages_key="answer",
+        output_messages_key="output",
     )
 
     cl.user_session.set("runnable", chain)
