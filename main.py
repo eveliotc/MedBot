@@ -30,7 +30,7 @@ from langchain_core.runnables import RunnablePassthrough
 def generate_answer(msg: AIMessage, config: RunnableConfig) -> Runnable:
     try:
         print(f"parse {type(msg)}: {msg}")
-        return msg | StrOutputParser()
+        return str(msg["answer"]) | StrOutputParser()
     except Exception as e:
         print(f"generate_answer got e {e}")
 
