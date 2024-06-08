@@ -65,7 +65,7 @@ Question:
     pipeline_compressor = DocumentCompressorPipeline(transformers=[splitter, redundant_filter, relevant_filter])
     compressed_retriever = ContextualCompressionRetriever(base_compressor=pipeline_compressor, base_retriever=retriever)
 
-    chain = create_retrieval_chain(retriever, qa) | OutputFixingParser(StrOutputParser(), llm=model)
+    chain = create_retrieval_chain(retriever, qa) | OutputFixingParser.from_llm(StrOutputParser(), llm=model)
 
     runnable = RunnableWithMessageHistory(
         chain,
