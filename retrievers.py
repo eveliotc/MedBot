@@ -62,7 +62,7 @@ class MedCptEmbeddings(BaseModel, Embeddings):
 
     def embed_query(self, text: str) -> List[float]:
         with torch.no_grad():
-            return self.query_embedding_function.encode(question)
+            return self.query_embedding_function.encode(text)
 
 def _idx2txt(indices, chunk_dir):
    return [json.loads(open(os.path.join(chunk_dir, i["source"]+".jsonl")).read().strip().split('\n')[i["index"]]) for i in indices]
@@ -141,7 +141,7 @@ class MedRagRetriever(BaseRetriever):
         return documents
 
     def embeddings(self):
-        return self.medrag.embeddings()
+        return self.medrag.embeddings
 
 if __name__ == "__main__":
     print(MedRagRetriever(dataset="textbooks", corpus_dir = './corpus').get_relevant_documents("covid"))

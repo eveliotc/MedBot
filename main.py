@@ -1,16 +1,20 @@
 from langchain.chains import create_history_aware_retriever, create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain_community.chat_models.ollama import ChatOllama
 from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain.output_parsers import OutputFixingParser
 from langchain.prompts import ChatPromptTemplate
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import (
+    DocumentCompressorPipeline,
+    EmbeddingsFilter,
+)
 from langchain.schema import StrOutputParser
 from langchain.schema.runnable import Runnable
 from langchain.schema.runnable.config import RunnableConfig
 from langchain_text_splitters.character import CharacterTextSplitter
+
+from langchain_community.chat_models.ollama import ChatOllama
 from langchain_community.document_transformers.embeddings_redundant_filter import EmbeddingsRedundantFilter
-from langchain_community.document_transformers.embeddings_filter import EmbeddingsFilter
-from langchain_community.document_transformers.document_compressor_pipeline import DocumentCompressorPipeline
-from langchain_community.retrievers.contextual_compression_retriever import ContextualCompressionRetriever
 
 from history import get_session_history
 from retrievers import MedRagRetriever
@@ -61,7 +65,7 @@ Question:
     pipeline_compressor = DocumentCompressorPipeline(transformers=[splitter, redundant_filter, relevant_filter])
     compressed_retriever = ContextualCompressionRetriever(base_compressor=pipeline_compressor, base_retriever=retriever)
 
-    chain = create_retrieval_chain(compressed_retriever, qa)
+    chain = create_retrieval_chain(retriever, qa) | OutputFixingParser(StrOutputParser(), llm=model)
 
     runnable = RunnableWithMessageHistory(
         chain,
@@ -71,7 +75,7 @@ Question:
         output_messages_key="answer",
     )
 
-    cl.user_session.set("runnable", runnable)
+    cl.user_session.set("runnable", chain)
 
 
 @cl.on_message
@@ -79,7 +83,7 @@ async def on_message(message: cl.Message):
     runnable = cl.user_session.get("runnable")  # type: Runnable
     out_msg = cl.Message(content="")
     async for chunk in runnable.astream(
-        {"input": message.content },
+        {"input": message.content},
         config=RunnableConfig(
                 callbacks=[cl.LangchainCallbackHandler()], 
                 configurable={'session_id': cl.user_session.get("id")}
