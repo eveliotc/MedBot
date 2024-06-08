@@ -21,6 +21,29 @@ from retrievers import MedRagRetriever
 
 import chainlit as cl
 
+
+from langchain_core.messages import AIMessage, HumanMessage, ToolCall, ToolMessage
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.runnables import RunnablePassthrough
+
+
+class ACustomException(Exception):
+    """Custom LangChain tool exception."""
+
+    def __init__(self, msg: BaseMessage, exception: Exception) -> None:
+        super().__init__()
+        self.msg = msg
+        self.exception = exception
+
+
+def custom_exception(msg: BaseMessage, config: RunnableConfig) -> Runnable:
+    try:
+        print(f"parse {msg}")
+        return StrOutputParser()
+    except Exception as e:
+        print(f"parse got e {e}")
+        raise ACustomException(msg, e)
+
 @cl.on_chat_start
 async def on_chat_start():
     prompt = ChatPromptTemplate.from_messages(
@@ -65,7 +88,7 @@ Question:
     pipeline_compressor = DocumentCompressorPipeline(transformers=[splitter, redundant_filter, relevant_filter])
     compressed_retriever = ContextualCompressionRetriever(base_compressor=pipeline_compressor, base_retriever=retriever)
 
-    chain = create_retrieval_chain(retriever, qa) | OutputFixingParser.from_llm(StrOutputParser(), llm=model)
+    chain = create_retrieval_chain(retriever, qa) | custom_exception
 
     runnable = RunnableWithMessageHistory(
         chain,
