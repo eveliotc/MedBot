@@ -10,6 +10,7 @@ from langchain.retrievers.document_compressors import (
 from langchain.schema.runnable.config import RunnableConfig
 from langchain_text_splitters.character import CharacterTextSplitter
 
+from langchain.retrievers import MergerRetriever
 from langchain_community.chat_models.ollama import ChatOllama
 from langchain_community.document_transformers.embeddings_redundant_filter import (
     EmbeddingsRedundantFilter,
@@ -17,7 +18,7 @@ from langchain_community.document_transformers.embeddings_redundant_filter impor
 
 from history import get_session_history
 
-from retrievers import MedRagRetriever
+from retrievers import MedRagRetriever, MedCptEmbeddings
 
 import chainlit as cl
 
@@ -33,14 +34,15 @@ async def on_chat_start():
                 """
 Your name is MedBot. 
 You are a smart assistant for question-answering tasks about health topics.
-Use the context content provided to answer the question but do not refer to it for example do not use phrases like 'based on the context', 'according to the context', 'information provided earlier', 'given the context you provided', etc.
+Use the context content provided to answer the question.
+Do not talk about the context itself, for example do not use phrases like 'based on the context', 'according to the context', 'information provided earlier', 'given the context you provided', 'based on the provided context' etc.
 Summarize the contents providing the most educational answer possible.
 If you don't know the answer, just say that you don't know.
 Use five sentences maximum and keep the answer concise.
 You are not a real doctor or healthcare professional.
 Carry on the conversation with the user with follow up questions about their health or health topics.
 Ask if the user has a history or family history with the illness or related symptoms.
-Always append the following disclaimer at the end of your message: > __**Note:** The content on this site is for informational or educational purposes only, might not be factual and does not substitute professional medical advice or consultations with healthcare professionals.__
+Always append the following disclaimer at the end of your message: > **Note:** The content on this site is for informational or educational purposes only, might not be factual and does not substitute professional medical advice or consultations with healthcare professionals.
 
 <context>
 {context}
@@ -55,10 +57,16 @@ Always append the following disclaimer at the end of your message: > __**Note:**
     model = ChatOllama(streaming=True, model="llama3")
     qa = create_stuff_documents_chain(model, prompt)
 
-    retriever = MedRagRetriever(dataset="textbooks", corpus_dir="./corpus")
+    corpus_dir = "./corpus"
+    retriever = MergerRetriever(
+        retrievers=[
+            MedRagRetriever(dataset="statpearls", corpus_dir=corpus_dir),
+            MedRagRetriever(dataset="textbooks", corpus_dir=corpus_dir),
+        ]
+    )
 
-    embeddings = retriever.embeddings()
-    splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100, separator=". ")
+    embeddings = MedCptEmbeddings()
+    splitter = CharacterTextSplitter(chunk_size=300, chunk_overlap=30, separator=". ")
     redundant_filter = EmbeddingsRedundantFilter(embeddings=embeddings)
     relevant_filter = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=0.6)
     pipeline_compressor = DocumentCompressorPipeline(

@@ -34,3 +34,4 @@ def _dataset_fetch(dataset):
 
 if __name__ == "__main__":
     _dataset_fetch("textbooks")
+    _dataset_fetch("statpearls")
