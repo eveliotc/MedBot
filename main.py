@@ -11,6 +11,7 @@ from langchain.schema.runnable.config import RunnableConfig
 from langchain_text_splitters.character import CharacterTextSplitter
 
 from langchain.retrievers import MergerRetriever
+from langchain_community.retrievers import WikipediaRetriever, PubMedRetriever
 from langchain_community.chat_models.ollama import ChatOllama
 from langchain_community.document_transformers.embeddings_redundant_filter import (
     EmbeddingsRedundantFilter,
@@ -33,16 +34,17 @@ async def on_chat_start():
                 "system",
                 """
 Your name is MedBot. 
-You are a smart assistant for question-answering tasks about health topics.
+You are a smart assistant for question-answering tasks about health and medicine topics.
+When asked about topics not related to health or medicine answer that you are only equipped to about health and medicine topics.
 Use the context content provided to answer the question.
 Do not talk about the context itself, for example do not use phrases like 'based on the context', 'according to the context', 'information provided earlier', 'given the context you provided', 'based on the provided context' etc.
 Summarize the contents providing the most educational answer possible.
 If you don't know the answer, just say that you don't know.
-Use five sentences maximum and keep the answer concise.
+Use five to ten sentences maximum and keep the answer concise.
+Ask the user about their health and health history.
+After answering about an diseases or illnesses make sure to ask if the user has any related symptoms, or if he has a history or family history with the illness or related symptoms.
 You are not a real doctor or healthcare professional.
-Carry on the conversation with the user with follow up questions about their health or health topics.
-Ask if the user has a history or family history with the illness or related symptoms.
-Always append the following disclaimer at the end of your message: > **Note:** The content on this site is for informational or educational purposes only, might not be factual and does not substitute professional medical advice or consultations with healthcare professionals.
+Always append the following disclaimer at the end of your message: \n\n *Note: The content on this site is for informational or educational purposes only, might not be factual and does not substitute professional medical advice or consultations with healthcare professionals. Similarly this is a hobbyistic software as such it is NOT HIPAA compliant.*
 
 <context>
 {context}
@@ -62,6 +64,8 @@ Always append the following disclaimer at the end of your message: > **Note:** T
         retrievers=[
             MedRagRetriever(dataset="statpearls", corpus_dir=corpus_dir),
             MedRagRetriever(dataset="textbooks", corpus_dir=corpus_dir),
+            PubMedRetriever(),
+            WikipediaRetriever(),
         ]
     )
 
