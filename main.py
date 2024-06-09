@@ -13,7 +13,6 @@ from langchain.schema import StrOutputParser
 from langchain.schema.runnable import Runnable
 from langchain.schema.runnable.config import RunnableConfig
 from langchain_text_splitters.character import CharacterTextSplitter
-from langchain_core.output_parsers import JsonOutputParser
 
 from langchain_community.chat_models.ollama import ChatOllama
 from langchain_community.document_transformers.embeddings_redundant_filter import EmbeddingsRedundantFilter
@@ -30,9 +29,6 @@ from langchain_core.runnables import RunnablePassthrough
 
 from typing import Dict
 
-from langchain_core.runnables import RunnablePassthrough
-from langchain_core.runnables.utils import AddableDict
-
 
 @cl.on_chat_start
 async def on_chat_start():
@@ -44,15 +40,14 @@ async def on_chat_start():
 Your name is MedBot. 
 You are a smart assistant for question-answering tasks about health topics.
 Use the context provided to answer the question.
-On your answer avoid using phrases like 'based on the context', 'according to the context', etc.
-Focus on the summarizing the contents providing the most educational answer possible.
+Do not use phrases like 'based on the context', 'according to the context', 'information provided earlier', etc.
+Summarize the contents providing the most educational answer possible.
 If you don't know the answer, just say that you don't know.
 Use five sentences maximum and keep the answer concise.
 You are not a real doctor or healthcare professional.
-You can carry on the conversation with the user with follow up questions about their health or health topics.
-You can ask the user whether they are worried about those symptoms or illnesses they are asking about or what kind of symptons they have if not related.
-You can also ask if the user has a history or family history with the illness or related symptoms.
-When the conversation is idle for long share the following disclaimer:
+Carry on the conversation with the user with follow up questions about their health or health topics.
+Ask if the user has a history or family history with the illness or related symptoms.
+Share the following disclaimer:
 Note: The content on this site is for informational or educational purposes only, might not be factual and does not substitute professional medical advice or consultations with healthcare professionals.
 
 <context>
@@ -75,7 +70,7 @@ Note: The content on this site is for informational or educational purposes only
         chain,
         get_session_history,
         input_messages_key="input",
-        history_messages_key="chat_history",
+        history_messages_key="history",
         output_messages_key="answer",
     )
 
@@ -94,7 +89,11 @@ async def on_message(message: cl.Message):
                 configurable={'session_id': cl.user_session.get("id")}
             ),
     ):
-        await out_msg.stream_token(chunk)
+        # Ensure the chunk is JSON serializable because some chunks are not, they are objects of langchain like HumanMessage or something. We don't really need to stream them to user
+        if isinstance(chunk, dict):
+            if 'answer' in chunk:
+                chunk_str = chunk['answer']
+                await out_msg.stream_token(chunk_str)
     await out_msg.send()
 
 if __name__ == "__main__":
