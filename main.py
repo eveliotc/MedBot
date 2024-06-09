@@ -1,7 +1,6 @@
 from langchain.chains import create_retrieval_chain
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.runnables.history import RunnableWithMessageHistory
-from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import (
     DocumentCompressorPipeline,
@@ -20,6 +19,7 @@ from langchain_community.document_transformers.embeddings_redundant_filter impor
 from history import get_session_history
 
 from retrievers import MedRagRetriever, MedCptEmbeddings
+from prompts import main_prompt
 
 import chainlit as cl
 
@@ -28,36 +28,9 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 @cl.on_chat_start
 async def on_chat_start():
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                """
-Your name is MedBot. 
-You are a smart assistant for question-answering tasks about health and medicine topics.
-When asked about topics not related to health or medicine answer that you are only equipped to about health and medicine topics.
-Use the context content provided to answer the question.
-Do not talk about the context itself, for example do not use phrases like 'based on the context', 'according to the context', 'information provided earlier', 'given the context you provided', 'based on the provided context' etc.
-Summarize the contents providing the most educational answer possible.
-If you don't know the answer, just say that you don't know.
-Use five to ten sentences maximum and keep the answer concise.
-Ask the user about their health and health history.
-After answering about an diseases or illnesses make sure to ask if the user has any related symptoms, or if he has a history or family history with the illness or related symptoms.
-You are not a real doctor or healthcare professional.
-Always append the following disclaimer at the end of your message: \n\n *Note: The content on this site is for informational or educational purposes only, might not be factual and does not substitute professional medical advice or consultations with healthcare professionals. Similarly this is a hobbyistic software as such it is NOT HIPAA compliant.*
-
-<context>
-{context}
-</context>
-                """,
-            ),
-            MessagesPlaceholder(variable_name="history"),
-            ("human", "Question: {input}"),
-        ]
-    )
 
     model = ChatOllama(streaming=True, model="llama3")
-    qa = create_stuff_documents_chain(model, prompt)
+    qa = create_stuff_documents_chain(model, main_prompt)
 
     corpus_dir = "./corpus"
     retriever = MergerRetriever(
