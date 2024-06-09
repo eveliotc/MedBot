@@ -1,6 +1,6 @@
 [project]
 # Whether to enable telemetry (default: true). No personal data is collected.
-enable_telemetry = true
+enable_telemetry = false
 
 
 # List of environment variables to be provided by each user to use the app.
@@ -33,7 +33,7 @@ auto_tag_thread = true
 
 # Authorize users to spontaneously upload files with messages
 [features.spontaneous_file_upload]
-    enabled = true
+    enabled = false
     accept = ["*/*"]
     max_files = 20
     max_size_mb = 500
@@ -54,7 +54,7 @@ auto_tag_thread = true
 
 [UI]
 # Name of the app and chatbot.
-name = "MedBot"
+name = "👨‍⚕️ MedBot"
 
 # Show the readme while the thread is empty.
 show_readme_as_default = true
