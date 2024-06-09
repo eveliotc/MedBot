@@ -3,7 +3,7 @@ from langchain.chains.combine_documents import create_stuff_documents_chain
 from langchain_core.runnables.history import RunnableWithMessageHistory
 from langchain_core.messages import AIMessage
 from langchain.output_parsers import OutputFixingParser
-from langchain.prompts import ChatPromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.retrievers import ContextualCompressionRetriever
 from langchain.retrievers.document_compressors import (
     DocumentCompressorPipeline,
@@ -18,6 +18,7 @@ from langchain_community.chat_models.ollama import ChatOllama
 from langchain_community.document_transformers.embeddings_redundant_filter import EmbeddingsRedundantFilter
 
 from history import get_session_history
+
 from retrievers import MedRagRetriever
 
 import chainlit as cl
@@ -47,14 +48,17 @@ Use five sentences maximum and keep the answer concise.
 You are not a real doctor or healthcare professional.
 Carry on the conversation with the user with follow up questions about their health or health topics.
 Ask if the user has a history or family history with the illness or related symptoms.
-Share the following disclaimer:
-Note: The content on this site is for informational or educational purposes only, might not be factual and does not substitute professional medical advice or consultations with healthcare professionals.
+Append the following disclaimer at the end of your message: 
+<disclaimer>
+> __**Note:** The content on this site is for informational or educational purposes only, might not be factual and does not substitute professional medical advice or consultations with healthcare professionals.__
+</disclaimer>
 
 <context>
 {context}
 </context>
                 """,
             ),
+            MessagesPlaceholder(variable_name="history"),
             ("human", 'Question: {input}'),
         ]
     )
@@ -64,7 +68,14 @@ Note: The content on this site is for informational or educational purposes only
 
     retriever = MedRagRetriever(dataset="textbooks", corpus_dir = './corpus')
 
-    chain = create_retrieval_chain(retriever, qa)
+    embeddings = retriever.embeddings()
+    splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=100, separator=". ")
+    redundant_filter = EmbeddingsRedundantFilter(embeddings=embeddings)
+    relevant_filter = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=0.6)
+    pipeline_compressor = DocumentCompressorPipeline(transformers=[splitter, redundant_filter, relevant_filter])
+    compressed_retriever = ContextualCompressionRetriever(base_compressor=pipeline_compressor, base_retriever=retriever)
+
+    chain = create_retrieval_chain(compressed_retriever, qa)
     
     runnable = RunnableWithMessageHistory(
         chain,
