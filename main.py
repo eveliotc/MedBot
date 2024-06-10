@@ -21,26 +21,10 @@ from history import get_session_history
 from retrievers import MedRagRetriever, MedCptEmbeddings
 from prompts import main_prompt
 
-from agents.rag_agent import RagAgent
 import chainlit as cl
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
-
-
-def agent_execute(message):
-    '''
-
-    :param message: user input form Chainlit
-    :return: result after running via CrewAI CoT using specified llm
-    '''
-
-    simple_agent = RagAgent()
-    crew = simple_agent.get_crew()
-    result = crew.kickoff(
-        inputs = {'query': message}
-    )
-    return result
 
 @cl.on_chat_start
 async def on_chat_start():
@@ -101,15 +85,6 @@ async def on_message(message: cl.Message):
                 await out_msg.stream_token(chunk_str)
     await out_msg.send()
 
-
-'''
-#this is Crew AI implementation based on user input. Will merge with rest of the code later
-@cl.on_message
-async def on_message(message: cl.Message):
-    user_input = message.content
-    response = agent_execute(user_input)
-    await cl.Message(response).send()
-'''
 
 if __name__ == "__main__":
     from chainlit.cli import run_chainlit
