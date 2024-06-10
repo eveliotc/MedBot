@@ -91,12 +91,8 @@ class MedRag:
     def __init__(self, dataset="textbooks", corpus_dir="./corpus"):
         super().__init__()
 
-
-
         assert dataset in hf_fetch._datasets
 
-        #hf_fetch._dataset_fetch("textbooks")
-        #hf_fetch._dataset_fetch("statpearls")
 
         self.dataset_name = dataset
         self.embeddings = MedCptEmbeddings()

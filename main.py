@@ -51,7 +51,7 @@ async def on_chat_start():
     corpus_dir = "./corpus"
     retriever = MergerRetriever(
         retrievers=[
-            #MedRagRetriever(dataset="statpearls", corpus_dir=corpus_dir),
+            MedRagRetriever(dataset="statpearls", corpus_dir=corpus_dir),
             MedRagRetriever(dataset="textbooks", corpus_dir=corpus_dir),
             PubMedRetriever(),
             WikipediaRetriever(),
