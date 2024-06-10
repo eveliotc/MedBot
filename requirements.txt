@@ -15,6 +15,10 @@ datasets
 faiss-cpu
 huggingface_hub
 
+hf_transfer
+xmltodict
+wikipedia
+
 #agents dependencies
 crewai
 crewai_tools
