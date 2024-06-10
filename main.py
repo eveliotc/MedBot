@@ -21,42 +21,29 @@ from history import get_session_history
 from retrievers import MedRagRetriever, MedCptEmbeddings
 from prompts import main_prompt
 
-from agents.rag_agent import RagAgent
+from agents.yt_agent import YTAgent
 import chainlit as cl
 
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 
 
-def agent_execute(message):
+def agent_yt_execute(diagnosis):
     '''
 
     :param message: user input form Chainlit
     :return: result after running via CrewAI CoT using specified llm
     '''
 
-    simple_agent = RagAgent()
-    crew = simple_agent.get_crew()
+    simple_yt_agent = YTAgent()
+    crew = simple_yt_agent.get_crew()
     result = crew.kickoff(
-        inputs = {'query': message}
+        inputs = {'query': diagnosis}
     )
     return result
 
 @cl.on_chat_start
 async def on_chat_start():
-
-    # await cl.sleep(5)
-    # res = await cl.AskUserMessage(content="Hi what is your name", timeout=10).send()
-    # if res:
-    #  await cl.Message(
-    #     content=f"Your name is: {res['output']}",
-    # ).send()
-    # else:
-    #     await cl.Message(
-    #         content=f"I look like I did not receive any information",
-    #     ).send()
-
-
 
     model = ChatOllama(streaming=True, model="llama3")
     qa = create_stuff_documents_chain(model, main_prompt)
@@ -95,13 +82,6 @@ async def on_chat_start():
     cl.user_session.set("runnable", runnable)
 
 
-@cl.step
-async def tool():
-    # Simulate a running task
-    await cl.sleep(2)
-
-    return "Here are some Yotube videos for you"
-
 @cl.on_message
 async def on_message(message: cl.Message):
     runnable = cl.user_session.get("runnable")  # type: Runnable
@@ -112,7 +92,6 @@ async def on_message(message: cl.Message):
         config=RunnableConfig(
             callbacks=[cl.LangchainCallbackHandler()],
             configurable={"session_id": cl.user_session.get("id")},
-            #history=get_session_history(cl.user_session.get("id"))
         ),
     ):
         # Ensure the chunk is JSON serializable because some chunks are not, they are objects of langchain like HumanMessage or something. We don't really need to stream them to user
@@ -121,18 +100,25 @@ async def on_message(message: cl.Message):
                 chunk_str = chunk["answer"]
                 await out_msg.stream_token(chunk_str)
     await out_msg.send()
+    # kind of Q&A by CrewAI agents, after the summary provided to user
+    ask_if_yotube_interested(out_msg.content)
 
-    await cl.Message(content="btw here are some ytube videos").send()
 
 
-'''
-#this is Crew AI implementation based on user input. Will merge with rest of the code later
-@cl.on_message
-async def on_message(message: cl.Message):
-    user_input = message.content
-    response = agent_execute(user_input)
-    await cl.Message(response).send()
-'''
+@cl.step
+async def ask_if_yotube_interested(diagnosis):
+    res = await cl.AskUserMessage(content="Would you like to also add some Youtube video related to your situation?", timeout=10).send()
+    if res:
+        res_as_text = res['output'].lower()
+        if 'yup' in res_as_text or 'yes' in res_as_text or 'sure' in res_as_text:
+            videos = agent_yt_execute(diagnosis)
+            await cl.Message(
+                content=f"Here are some YT videos {videos}"
+            ).send()
+    else:
+        await cl.Message(
+            content="It looks like you are not interested. It's fine let's continue chatting"
+        ).send()
 
 if __name__ == "__main__":
     from chainlit.cli import run_chainlit
