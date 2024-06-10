@@ -24,3 +24,4 @@ crewai
 crewai_tools
 ipython
 python-dotenv
+google-api-python-client

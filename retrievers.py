@@ -19,6 +19,7 @@ import torch
 import numpy as np
 import json
 
+import hf_fetch
 
 class CompositeRetriever(BaseRetriever):
 
@@ -90,9 +91,8 @@ class MedRag:
     def __init__(self, dataset="textbooks", corpus_dir="./corpus"):
         super().__init__()
 
-        import hf_fetch
-
         assert dataset in hf_fetch._datasets
+
 
         self.dataset_name = dataset
         self.embeddings = MedCptEmbeddings()
