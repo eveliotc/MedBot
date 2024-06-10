@@ -4,7 +4,7 @@ if [ ! -f .env ]; then
 fi
 
 # setup venv
-python -m venv .venv 
+python -m venv .venv
 source .venv/bin/activate
 
 # install requirements
@@ -18,6 +18,7 @@ export OLLAMA_MODEL="llama3"
 nohup ollama serve &
 sleep 2 && ollama pull $OLLAMA_MODEL
 
-# prefetch datasets
-export HF_HUB_ENABLE_HF_TRANSFER=1
-python hf_fetch.py
+# disabled dataset fetching since on deployment corpus is mounted
+# you can prefetch specific datasets running the following
+# export HF_HUB_ENABLE_HF_TRANSFER=1
+# python hf_fetch.py
