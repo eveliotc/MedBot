@@ -1,4 +1,4 @@
-# 👨‍⚕️ Welcome to MedBot
+# 👨‍⚕️ Welcome to MedBot  🩺
 
 Ask me about your health!
 
