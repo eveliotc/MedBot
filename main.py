@@ -45,13 +45,26 @@ def agent_execute(message):
 @cl.on_chat_start
 async def on_chat_start():
 
+    # await cl.sleep(5)
+    # res = await cl.AskUserMessage(content="Hi what is your name", timeout=10).send()
+    # if res:
+    #  await cl.Message(
+    #     content=f"Your name is: {res['output']}",
+    # ).send()
+    # else:
+    #     await cl.Message(
+    #         content=f"I look like I did not receive any information",
+    #     ).send()
+
+
+
     model = ChatOllama(streaming=True, model="llama3")
     qa = create_stuff_documents_chain(model, main_prompt)
 
     corpus_dir = "./corpus"
     retriever = MergerRetriever(
         retrievers=[
-            MedRagRetriever(dataset="statpearls", corpus_dir=corpus_dir),
+            #MedRagRetriever(dataset="statpearls", corpus_dir=corpus_dir),
             MedRagRetriever(dataset="textbooks", corpus_dir=corpus_dir),
             PubMedRetriever(),
             WikipediaRetriever(),
@@ -82,6 +95,13 @@ async def on_chat_start():
     cl.user_session.set("runnable", runnable)
 
 
+@cl.step
+async def tool():
+    # Simulate a running task
+    await cl.sleep(2)
+
+    return "Here are some Yotube videos for you"
+
 @cl.on_message
 async def on_message(message: cl.Message):
     runnable = cl.user_session.get("runnable")  # type: Runnable
@@ -92,6 +112,7 @@ async def on_message(message: cl.Message):
         config=RunnableConfig(
             callbacks=[cl.LangchainCallbackHandler()],
             configurable={"session_id": cl.user_session.get("id")},
+            #history=get_session_history(cl.user_session.get("id"))
         ),
     ):
         # Ensure the chunk is JSON serializable because some chunks are not, they are objects of langchain like HumanMessage or something. We don't really need to stream them to user
@@ -100,6 +121,8 @@ async def on_message(message: cl.Message):
                 chunk_str = chunk["answer"]
                 await out_msg.stream_token(chunk_str)
     await out_msg.send()
+
+    await cl.Message(content="btw here are some ytube videos").send()
 
 
 '''

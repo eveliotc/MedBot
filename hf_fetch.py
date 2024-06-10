@@ -1,5 +1,5 @@
 from dotenv import load_dotenv
-from huggingface_hub import HfApi
+from huggingface_hub import HfApi, login
 import os
 
 load_dotenv()
@@ -8,6 +8,7 @@ os.environ["HF_HUB_ENABLE_HF_TRANSFER"] = "1"
 
 def _hf_fetch(repo_id, matching, ignore=[]):
     api = HfApi()
+    login("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")
 
     all_remote_files = api.list_repo_files(repo_id)
     remote_files = list(
