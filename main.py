@@ -1,10 +1,31 @@
-from langchain_community.chat_models.ollama import ChatOllama
-from langchain.prompts import ChatPromptTemplate
-from langchain.schema import StrOutputParser
-from langchain.schema.runnable import Runnable
+from langchain.chains import create_retrieval_chain
+from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain_core.runnables.history import RunnableWithMessageHistory
+from langchain.retrievers import ContextualCompressionRetriever
+from langchain.retrievers.document_compressors import (
+    DocumentCompressorPipeline,
+    EmbeddingsFilter,
+)
 from langchain.schema.runnable.config import RunnableConfig
+from langchain_text_splitters.character import CharacterTextSplitter
+
+from langchain.retrievers import MergerRetriever
+from langchain_community.retrievers import WikipediaRetriever, PubMedRetriever
+from langchain_community.chat_models.ollama import ChatOllama
+from langchain_community.document_transformers.embeddings_redundant_filter import (
+    EmbeddingsRedundantFilter,
+)
+
+from history import get_session_history
+
+from retrievers import MedRagRetriever, MedCptEmbeddings
+from prompts import main_prompt
+
 from agents.rag_agent import RagAgent
 import chainlit as cl
+
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+
 
 
 def agent_execute(message):
@@ -23,48 +44,63 @@ def agent_execute(message):
 
 @cl.on_chat_start
 async def on_chat_start():
-    model = ChatOllama(streaming=True, model="llama3")
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            (
-                "system",
-                """You're a very knowledgeable doctor robot called MedBot who provides accurate and eloquent yet simple answers to health related questions based on given context. 
-                If no context is provided just reply saying you are not familiar with the topic and they should consult with healthcare professionals.
-                You can also strike a conversation with the user folllowing up with questions about their health. 
-                You can ask the user wether they are worried about those symptoms or illnesses they are asking about or what kind of symptons they have if not related.
-                You can also ask if the user has a history or family history with the illness or related symptoms.
-                If the conversation is idle you can always share an interesting snippet or joke about healthcare.
-                If the conversation is idle for long share the following disclaimer:
-                
-                Note: The content on this site is for informational or educational purposes only, might not be factual and does not substitute professional medical advice or consultations with healthcare professionals.
-                """,
-            ),
-            ("human", '''
-Here are the relevant documents: 
-{context}
 
-Here is the question:
-{question}
-            '''),
+    model = ChatOllama(streaming=True, model="llama3")
+    qa = create_stuff_documents_chain(model, main_prompt)
+
+    corpus_dir = "./corpus"
+    retriever = MergerRetriever(
+        retrievers=[
+            MedRagRetriever(dataset="statpearls", corpus_dir=corpus_dir),
+            MedRagRetriever(dataset="textbooks", corpus_dir=corpus_dir),
+            PubMedRetriever(),
+            WikipediaRetriever(),
         ]
     )
-    runnable = prompt | model | StrOutputParser()
+
+    embeddings = MedCptEmbeddings()
+    splitter = CharacterTextSplitter(chunk_size=300, chunk_overlap=30, separator=". ")
+    redundant_filter = EmbeddingsRedundantFilter(embeddings=embeddings)
+    relevant_filter = EmbeddingsFilter(embeddings=embeddings, similarity_threshold=0.6)
+    pipeline_compressor = DocumentCompressorPipeline(
+        transformers=[splitter, redundant_filter, relevant_filter]
+    )
+    compressed_retriever = ContextualCompressionRetriever(
+        base_compressor=pipeline_compressor, base_retriever=retriever
+    )
+
+    chain = create_retrieval_chain(compressed_retriever, qa)
+
+    runnable = RunnableWithMessageHistory(
+        chain,
+        get_session_history,
+        input_messages_key="input",
+        history_messages_key="history",
+        output_messages_key="answer",
+    )
+
     cl.user_session.set("runnable", runnable)
 
 
 @cl.on_message
 async def on_message(message: cl.Message):
     runnable = cl.user_session.get("runnable")  # type: Runnable
-
     out_msg = cl.Message(content="")
 
     async for chunk in runnable.astream(
-        {"question": message.content, "context": "Patient should take vitamin c."},
-        config=RunnableConfig(callbacks=[cl.LangchainCallbackHandler()]),
+        {"input": message.content},
+        config=RunnableConfig(
+            callbacks=[cl.LangchainCallbackHandler()],
+            configurable={"session_id": cl.user_session.get("id")},
+        ),
     ):
-        await out_msg.stream_token(chunk)
-
+        # Ensure the chunk is JSON serializable because some chunks are not, they are objects of langchain like HumanMessage or something. We don't really need to stream them to user
+        if isinstance(chunk, dict):
+            if "answer" in chunk:
+                chunk_str = chunk["answer"]
+                await out_msg.stream_token(chunk_str)
     await out_msg.send()
+
 
 '''
 #this is Crew AI implementation based on user input. Will merge with rest of the code later
@@ -77,4 +113,5 @@ async def on_message(message: cl.Message):
 
 if __name__ == "__main__":
     from chainlit.cli import run_chainlit
+
     run_chainlit(__file__)

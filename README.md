@@ -5,16 +5,23 @@ A prototype of a chatbot based-off [MedRAG](https://huggingface.co/datasets/MedR
 
 ### .env
 0. Create a .env file
-0. Define your OpenAI API Key as follows
+0. Define your HuggingFace API Key as follows
 ```
-OPENAI_API_KEY=sk-...
+HF_TOKEN=...
 ```
-2. Download https://www.ollama.com/ and then `ollama` command line tool
-3. ```ollama run llama3```
-4.  run `chainlit run main.py -w` command from your project root
 
+### setup.sh
+0. Run `./setup.sh` to configure the environment and fetch dependencies
 
-## For big file commit!
+### devserver.sh
+0. Run `./devserver.sh` to start the server
+
+### Run locally 
+1. Download https://www.ollama.com/ and then `ollama` command line tool
+2. ```ollama pull llama3```
+3. run `chainlit run main.py -w` command from your project root
+
+### For big files commit
 
 ### Example:
 -  `brew install git-lfs`
